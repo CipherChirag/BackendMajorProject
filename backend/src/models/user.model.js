@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import jwt from "jasonwebtoken";
+import jwt from "jsonwebtoken";
 //JWT is a bearer token.
 
 import bcrypt from "bcrypt";
@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre("save", async function(next) {
     if(this.isModified("password")) {
-        this.password = bcrypt.hash(this.password, 10)
+        this.password = await bcrypt.hash(this.password, 10)
     }
     next()
 });
@@ -85,4 +85,4 @@ userSchema.methods.generateRefreshToken = function(){
     )
 }
 
-export default User = mongoose.model("User", userSchema);
+export const User = mongoose.model("User", userSchema);
