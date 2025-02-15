@@ -199,7 +199,7 @@ const updateAccount = asyncHandler( async (req, res) => {
         throw new ApiError(400, "At least one field is required");
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -217,6 +217,9 @@ const updateAccount = asyncHandler( async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler( async (req, res) => {
+
+    const oldAvatar = req.user.avatar.secure_url;
+
     const avatarLocalPath = req.file?.path;
     if(!avatarLocalPath) {
         throw new ApiError(400, "Avatar is required");
@@ -237,13 +240,20 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
             new: true
         }
     ).select("-password -refreshToken");
-    
+
+    if (oldAvatar) {
+        await cloudinary.uploader.destroy(oldAvatar);
+    }
+
     return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar updated successfully"));
 });
 
 const updateUserCoverImage = asyncHandler( async (req, res) => {
+
+    const oldCoverImage = req.user.coverImage.secure_url;
+    
     const coverImageLocalPath = req.file?.path;
     if(!coverImageLocalPath) {
         throw new ApiError(400, "Cover Image is required");
@@ -264,6 +274,10 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
             new: true
         }
     ).select("-password -refreshToken");
+
+    if (oldCoverImage) {
+        await cloudinary.uploader.destroy(oldCoverImage);
+    }
 
     return res
     .status(200)
