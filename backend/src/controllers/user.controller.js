@@ -193,7 +193,7 @@ const getCurrentUser = asyncHandler( async (req, res) => {
     .json(new ApiResponse(200, req.user, "User found"));
 });
 
-const updateAccount = asyncHandler( async (req, res) => {
+const updateAccountDetails = asyncHandler( async (req, res) => {
     const {fullname, email} = req.body;
 
     if(!fullname || !email) {
@@ -413,9 +413,10 @@ export {
     refreshAccessToken,
     changePassword,
     getCurrentUser,
-    updateAccount,
+    updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
     getCurrentUser,
+    getUserChannelProfile,
     getWatchHistory
 };
