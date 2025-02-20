@@ -4,15 +4,13 @@ import { User } from '../models/user.model.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import jwt from 'jsonwebtoken';
-import { Mongoose } from 'mongoose';
+import { mongoose } from 'mongoose';
 
 const generateAccessandRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
         const accessToken = await user.generateAccessToken();
         const refreshToken = await user.generateRefreshToken();
-        user.refreshToken = refreshToken;
-
         user.refreshToken = refreshToken;
         await user.save({ validateBeforeSave: false });
         return { accessToken, refreshToken };
@@ -73,7 +71,7 @@ const loginUser = asyncHandler( async (req, res) => {
         throw new ApiError(400, "Username or email is required")
     }
     const user = await User.findOne({
-        $or: [{ email }, { username }]
+        $or: [{ email: emailorusername }, { username: emailorusername }]
     });
     if (!user) {
         throw new ApiError(409, "User with email or username doesn't exists");
@@ -85,11 +83,8 @@ const loginUser = asyncHandler( async (req, res) => {
     if(!checkPassword) {
         throw new ApiError(401, "Invalid User Credentials")
     }
-
     const { accessToken, refreshToken } = await generateAccessandRefreshToken(user._id);
-
-    const loggedInUser = User.findById(user._id).select("-password -refreshToken");
-    
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
     const options = {
         httpOnly: true,
         secure: true
@@ -107,8 +102,8 @@ const loginUser = asyncHandler( async (req, res) => {
 
 const logoutUser = asyncHandler( async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 
-        $set: {
-            refreshToken: undefined
+        $unset: {
+            refreshToken: 1
         }
     }, {
         new: true
@@ -132,20 +127,18 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
         throw new ApiError(401, "Unauthenticated");
     }
     try {
-        const decodedToken = jwt.verify (incomingRefreshToken, process.env.JWT_REFRESH_SECRET);
-    
+        const decodedToken = jwt.verify (incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await User.findById(decodedToken?._id);
         if(!user || user.refreshToken !== incomingRefreshToken) {
             throw new ApiError(401, "Invalid refresh token");
         }
-    
         const options = {
             httpOnly: true,
             secure: true
         }
     
-        const {accessToken, newRefreshToken} = await generateAccessandRefreshToken(user._id);
-    
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessandRefreshToken(user._id);
+        
         return res
         .status(200)
         .cookie("accessToken", accessToken, options)
@@ -171,7 +164,7 @@ const changePassword = asyncHandler( async (req, res) => {
     if(!oldPassword || !newPassword) {
         throw new ApiError(400, "Old password and new password are required");
     }
-    const user = User.findById(req.user._id)
+    const user = await User.findById(req.user._id)
     if(!user) {
         throw new ApiError(500, "Error while changing password");
     }
@@ -358,7 +351,7 @@ const getWatchHistory = asyncHandler( async (req, res) => {
     const user = await User.aggregate([
         {
             $match: {
-                _id: new Mongoose.Types.ObjectId(req.user._id)
+                _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -396,7 +389,6 @@ const getWatchHistory = asyncHandler( async (req, res) => {
             }
         }
     ])
-
     return res
     .status(200)
     .json(
@@ -416,7 +408,6 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getCurrentUser,
     getUserChannelProfile,
     getWatchHistory
 };
